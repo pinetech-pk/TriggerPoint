@@ -1,37 +1,37 @@
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { TradingSetup } from '@/lib/types';
-import { formatDistanceToNow } from 'date-fns';
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { TradingSetup } from "@/lib/oldtypes";
+import { formatDistanceToNow } from "date-fns";
 
 interface UpcomingSetupsProps {
   setups: TradingSetup[];
 }
 
 export function UpcomingSetups({ setups }: UpcomingSetupsProps) {
-  const getStateColor = (state: TradingSetup['state']) => {
+  const getStateColor = (state: TradingSetup["state"]) => {
     switch (state) {
-      case 'active':
-        return 'bg-green-500';
-      case 'approaching':
-        return 'bg-yellow-500';
-      case 'dormant':
-        return 'bg-gray-500';
+      case "active":
+        return "bg-green-500";
+      case "approaching":
+        return "bg-yellow-500";
+      case "dormant":
+        return "bg-gray-500";
     }
   };
 
-  const getStateIcon = (state: TradingSetup['state']) => {
+  const getStateIcon = (state: TradingSetup["state"]) => {
     switch (state) {
-      case 'active':
-        return '🟢';
-      case 'approaching':
-        return '🟡';
-      case 'dormant':
-        return '⚫';
+      case "active":
+        return "🟢";
+      case "approaching":
+        return "🟡";
+      case "dormant":
+        return "⚫";
     }
   };
 
-  const activeSetups = setups.filter(s => s.state === 'active');
-  const approachingSetups = setups.filter(s => s.state === 'approaching');
+  const activeSetups = setups.filter((s) => s.state === "active");
+  const approachingSetups = setups.filter((s) => s.state === "approaching");
 
   return (
     <Card className="p-6">
@@ -73,25 +73,25 @@ export function UpcomingSetups({ setups }: UpcomingSetupsProps) {
 }
 
 function SetupCard({ setup }: { setup: TradingSetup }) {
-  const getStateColor = (state: TradingSetup['state']) => {
+  const getStateColor = (state: TradingSetup["state"]) => {
     switch (state) {
-      case 'active':
-        return 'bg-green-500';
-      case 'approaching':
-        return 'bg-yellow-500';
-      case 'dormant':
-        return 'bg-gray-500';
+      case "active":
+        return "bg-green-500";
+      case "approaching":
+        return "bg-yellow-500";
+      case "dormant":
+        return "bg-gray-500";
     }
   };
 
-  const getStateIcon = (state: TradingSetup['state']) => {
+  const getStateIcon = (state: TradingSetup["state"]) => {
     switch (state) {
-      case 'active':
-        return '🟢';
-      case 'approaching':
-        return '🟡';
-      case 'dormant':
-        return '⚫';
+      case "active":
+        return "🟢";
+      case "approaching":
+        return "🟡";
+      case "dormant":
+        return "⚫";
     }
   };
 
@@ -107,20 +107,20 @@ function SetupCard({ setup }: { setup: TradingSetup }) {
             <div className="text-xs text-muted-foreground">{setup.model}</div>
           </div>
         </div>
-        <Badge variant="outline">
-          Confidence: {setup.confidence}/10
-        </Badge>
+        <Badge variant="outline">Confidence: {setup.confidence}/10</Badge>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-sm mb-2">
         <div>
-          <span className="text-muted-foreground">Entry:</span> ${setup.entryPrice}
+          <span className="text-muted-foreground">Entry:</span> $
+          {setup.entryPrice}
         </div>
         <div>
           <span className="text-muted-foreground">SL:</span> ${setup.stopLoss}
         </div>
         <div>
-          <span className="text-muted-foreground">TP:</span> ${setup.targetPrice}
+          <span className="text-muted-foreground">TP:</span> $
+          {setup.targetPrice}
         </div>
       </div>
 

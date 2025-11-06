@@ -4,7 +4,7 @@ import {
   TradingSetup,
   TodaysPlan,
   RiskMetrics,
-} from "@/lib/types";
+} from "@/lib/oldtypes";
 
 // Mock Assets
 export const mockAssets: Asset[] = [

@@ -1,6 +1,6 @@
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Asset, TradingMode } from '@/lib/types';
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Asset, TradingMode } from "@/lib/oldtypes";
 
 interface FocusAssetsProps {
   tradingMode: TradingMode;
@@ -8,26 +8,30 @@ interface FocusAssetsProps {
   marketConditions: string;
 }
 
-export function FocusAssets({ tradingMode, focusAssets, marketConditions }: FocusAssetsProps) {
+export function FocusAssets({
+  tradingMode,
+  focusAssets,
+  marketConditions,
+}: FocusAssetsProps) {
   const getModeColor = (mode: TradingMode) => {
     switch (mode) {
-      case 'scalp':
-        return 'bg-red-500';
-      case 'day-trade':
-        return 'bg-blue-500';
-      case 'swing':
-        return 'bg-green-500';
+      case "scalp":
+        return "bg-red-500";
+      case "day-trade":
+        return "bg-blue-500";
+      case "swing":
+        return "bg-green-500";
     }
   };
 
   const getModeLabel = (mode: TradingMode) => {
     switch (mode) {
-      case 'scalp':
-        return 'Scalp Mode';
-      case 'day-trade':
-        return 'Day Trade Mode';
-      case 'swing':
-        return 'Swing Mode';
+      case "scalp":
+        return "Scalp Mode";
+      case "day-trade":
+        return "Day Trade Mode";
+      case "swing":
+        return "Swing Mode";
     }
   };
 
@@ -45,7 +49,11 @@ export function FocusAssets({ tradingMode, focusAssets, marketConditions }: Focu
           <div className="text-sm text-muted-foreground mb-2">Focus Assets</div>
           <div className="flex flex-wrap gap-2">
             {focusAssets.map((asset) => (
-              <Badge key={asset.id} variant="outline" className="text-base px-3 py-1">
+              <Badge
+                key={asset.id}
+                variant="outline"
+                className="text-base px-3 py-1"
+              >
                 {asset.symbol}
               </Badge>
             ))}
@@ -53,7 +61,9 @@ export function FocusAssets({ tradingMode, focusAssets, marketConditions }: Focu
         </div>
 
         <div>
-          <div className="text-sm text-muted-foreground mb-2">Market Conditions</div>
+          <div className="text-sm text-muted-foreground mb-2">
+            Market Conditions
+          </div>
           <p className="text-sm">{marketConditions}</p>
         </div>
       </div>

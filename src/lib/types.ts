@@ -78,7 +78,11 @@ export interface Position {
 
 export interface PerformanceMetrics {
   todayPnL: number;
+  todayRRx: number;
   yesterdayPnL: number;
+  yesterdayRRx: number;
   weekPnL: number;
+  weekRRx: number;
   monthPnL: number;
+  monthRRx: number;
 }

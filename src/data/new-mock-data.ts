@@ -14,9 +14,13 @@ export const mockAssets: Asset[] = [
 // Mock Performance Metrics
 export const mockPerformance: PerformanceMetrics = {
   todayPnL: 13.50,
+  todayRRx: 1.2,
   yesterdayPnL: -22.50,
+  yesterdayRRx: -0.5,
   weekPnL: 74.00,
-  monthPnL: 185.73
+  weekRRx: 3.35,
+  monthPnL: 185.73,
+  monthRRx: 8.5
 };
 
 // Mock Today's Plan

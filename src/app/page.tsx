@@ -6,23 +6,33 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  mockPerformance,
   mockTodaysPlan,
   mockNextDayPlan,
   mockActiveSetups,
   mockApproachingSetups,
   calculateProgress,
   shouldTriggerNotification,
+  mockPerformance,
 } from "@/data/new-mock-data";
 import { getModelName } from "@/data/trading-models";
 import { formatDistanceToNow, format } from "date-fns";
+import { loadFromStorage, KEYS } from "@/lib/storage";
+import { PerformanceMetrics } from "@/lib/types";
 import Link from "next/link";
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
+  const [performance, setPerformance] =
+    useState<PerformanceMetrics>(mockPerformance);
 
   useEffect(() => {
     setMounted(true);
+    // Load performance data from storage
+    const savedPerformance = loadFromStorage<PerformanceMetrics>(
+      KEYS.PERFORMANCE,
+      mockPerformance
+    );
+    setPerformance(savedPerformance);
   }, []);
 
   if (!mounted) {
@@ -37,11 +47,15 @@ export default function DashboardPage() {
           <div className="text-sm text-muted-foreground mb-1">Today's P&L</div>
           <div
             className={`text-2xl font-bold ${
-              mockPerformance.todayPnL >= 0 ? "text-green-600" : "text-red-600"
+              performance.todayPnL >= 0 ? "text-green-600" : "text-red-600"
             }`}
           >
-            ${mockPerformance.todayPnL >= 0 ? "+" : ""}
-            {mockPerformance.todayPnL.toFixed(2)}
+            ${performance.todayPnL >= 0 ? "+" : ""}
+            {performance.todayPnL.toFixed(2)}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            RRx: {performance.todayRRx >= 0 ? "+" : ""}
+            {performance.todayRRx.toFixed(2)}x
           </div>
         </Card>
 
@@ -51,13 +65,15 @@ export default function DashboardPage() {
           </div>
           <div
             className={`text-2xl font-bold ${
-              mockPerformance.yesterdayPnL >= 0
-                ? "text-green-600"
-                : "text-red-600"
+              performance.yesterdayPnL >= 0 ? "text-green-600" : "text-red-600"
             }`}
           >
-            ${mockPerformance.yesterdayPnL >= 0 ? "+" : ""}
-            {mockPerformance.yesterdayPnL.toFixed(2)}
+            ${performance.yesterdayPnL >= 0 ? "+" : ""}
+            {performance.yesterdayPnL.toFixed(2)}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            RRx: {performance.yesterdayRRx >= 0 ? "+" : ""}
+            {performance.yesterdayRRx.toFixed(2)}x
           </div>
         </Card>
 
@@ -67,11 +83,15 @@ export default function DashboardPage() {
           </div>
           <div
             className={`text-2xl font-bold ${
-              mockPerformance.weekPnL >= 0 ? "text-green-600" : "text-red-600"
+              performance.weekPnL >= 0 ? "text-green-600" : "text-red-600"
             }`}
           >
-            ${mockPerformance.weekPnL >= 0 ? "+" : ""}
-            {mockPerformance.weekPnL.toFixed(2)}
+            ${performance.weekPnL >= 0 ? "+" : ""}
+            {performance.weekPnL.toFixed(2)}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            RRx: {performance.weekRRx >= 0 ? "+" : ""}
+            {performance.weekRRx.toFixed(2)}x
           </div>
         </Card>
 
@@ -81,19 +101,25 @@ export default function DashboardPage() {
           </div>
           <div
             className={`text-2xl font-bold ${
-              mockPerformance.monthPnL >= 0 ? "text-green-600" : "text-red-600"
+              performance.monthPnL >= 0 ? "text-green-600" : "text-red-600"
             }`}
           >
-            ${mockPerformance.monthPnL >= 0 ? "+" : ""}
-            {mockPerformance.monthPnL.toFixed(2)}
+            ${performance.monthPnL >= 0 ? "+" : ""}
+            {performance.monthPnL.toFixed(2)}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            RRx: {performance.monthRRx >= 0 ? "+" : ""}
+            {performance.monthRRx.toFixed(2)}x
           </div>
         </Card>
       </div>
 
-      {/* New Trade Button */}
-      <Button className="w-full" size="lg" variant="outline">
-        + New Trade
-      </Button>
+      {/* Update Performance Button */}
+      <Link href="/performance">
+        <Button className="w-full" size="lg" variant="outline">
+          📊 Update Performance
+        </Button>
+      </Link>
 
       {/* Main Content: Today's Plan + Critical Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -224,9 +250,11 @@ export default function DashboardPage() {
           </div>
         </Card>
       ) : (
-        <Button className="w-full" size="lg" variant="outline">
-          + New Plan
-        </Button>
+        <Link href="/plan/new">
+          <Button className="w-full" size="lg" variant="outline">
+            + New Plan
+          </Button>
+        </Link>
       )}
 
       {/* Calendar Button */}
@@ -339,7 +367,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-purple-500 to-purple-300 transition-all duration-500"
+                        className="h-full bg-linear-to-r from-purple-500 to-purple-300 transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
