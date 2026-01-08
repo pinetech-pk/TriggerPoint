@@ -3,3 +3,6 @@ git branch -M main
 git remote add origin https://github.com/pinetech-pk/TriggerPoint
 git remote -v
 
+
+======================
+git pull origin main
