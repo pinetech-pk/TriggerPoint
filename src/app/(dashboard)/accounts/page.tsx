@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Wallet, MoreVertical, Loader2 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Plus, Wallet, MoreVertical, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,23 +40,43 @@ const riskLevelOptions = [
   { value: "high", label: "High" },
 ];
 
+const initialFormData = {
+  name: "",
+  account_type: "personal",
+  risk_level: "medium",
+  initial_capital: "",
+  broker: "",
+  description: "",
+};
+
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<AccountWithStats | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    account_type: "personal",
-    risk_level: "medium",
-    initial_capital: "",
-    broker: "",
-    description: "",
-  });
+  const [formData, setFormData] = useState(initialFormData);
+  const [editFormData, setEditFormData] = useState(initialFormData);
 
   const supabase = createClient();
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Fetch accounts with stats
   const fetchAccounts = async () => {
@@ -104,7 +124,7 @@ export default function AccountsPage() {
     fetchAccounts();
   }, []);
 
-  // Handle form submission
+  // Handle create form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -131,17 +151,78 @@ export default function AccountsPage() {
     if (error) {
       console.error("Error creating account:", error);
     } else {
-      // Reset form and close dialog
-      setFormData({
-        name: "",
-        account_type: "personal",
-        risk_level: "medium",
-        initial_capital: "",
-        broker: "",
-        description: "",
-      });
+      setFormData(initialFormData);
       setDialogOpen(false);
-      // Refresh accounts list
+      fetchAccounts();
+    }
+
+    setSubmitting(false);
+  };
+
+  // Handle edit
+  const handleEditClick = (account: AccountWithStats) => {
+    setSelectedAccount(account);
+    setEditFormData({
+      name: account.name,
+      account_type: account.account_type,
+      risk_level: account.risk_level,
+      initial_capital: account.initial_capital.toString(),
+      broker: account.broker || "",
+      description: account.description || "",
+    });
+    setActiveMenu(null);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAccount) return;
+    setSubmitting(true);
+
+    const { error } = await (supabase
+      .from("accounts") as any)
+      .update({
+        name: editFormData.name,
+        account_type: editFormData.account_type,
+        risk_level: editFormData.risk_level,
+        initial_capital: parseFloat(editFormData.initial_capital) || 0,
+        broker: editFormData.broker || null,
+        description: editFormData.description || null,
+      })
+      .eq("id", selectedAccount.id);
+
+    if (error) {
+      console.error("Error updating account:", error);
+    } else {
+      setEditDialogOpen(false);
+      setSelectedAccount(null);
+      fetchAccounts();
+    }
+
+    setSubmitting(false);
+  };
+
+  // Handle delete
+  const handleDeleteClick = (account: AccountWithStats) => {
+    setSelectedAccount(account);
+    setActiveMenu(null);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedAccount) return;
+    setSubmitting(true);
+
+    const { error } = await (supabase
+      .from("accounts") as any)
+      .delete()
+      .eq("id", selectedAccount.id);
+
+    if (error) {
+      console.error("Error deleting account:", error);
+    } else {
+      setDeleteDialogOpen(false);
+      setSelectedAccount(null);
       fetchAccounts();
     }
 
@@ -253,6 +334,141 @@ export default function AccountsPage() {
           </Dialog>
         </div>
 
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Account</DialogTitle>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleEditSubmit}>
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Account Name</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="My Trading Account"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-type">Account Type</Label>
+                  <Select
+                    id="edit-type"
+                    options={accountTypeOptions}
+                    value={editFormData.account_type}
+                    onChange={(e) => setEditFormData({ ...editFormData, account_type: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-risk">Risk Level</Label>
+                  <Select
+                    id="edit-risk"
+                    options={riskLevelOptions}
+                    value={editFormData.risk_level}
+                    onChange={(e) => setEditFormData({ ...editFormData, risk_level: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-capital">Initial Capital ($)</Label>
+                <Input
+                  id="edit-capital"
+                  type="number"
+                  placeholder="1000"
+                  value={editFormData.initial_capital}
+                  onChange={(e) => setEditFormData({ ...editFormData, initial_capital: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-broker">Broker (Optional)</Label>
+                <Input
+                  id="edit-broker"
+                  placeholder="e.g., FTMO, Interactive Brokers"
+                  value={editFormData.broker}
+                  onChange={(e) => setEditFormData({ ...editFormData, broker: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description (Optional)</Label>
+                <Textarea
+                  id="edit-description"
+                  placeholder="Notes about this account..."
+                  rows={2}
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Account</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Are you sure you want to delete <strong>{selectedAccount?.name}</strong>?
+                This action cannot be undone.
+              </p>
+              {selectedAccount && (selectedAccount.trades_count || 0) > 0 && (
+                <p className="text-sm text-yellow-500">
+                  Warning: This account has {selectedAccount.trades_count} trade(s) associated with it.
+                  Deleting will remove the account reference from those trades.
+                </p>
+              )}
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeleteDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteConfirm}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Account"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -299,9 +515,35 @@ export default function AccountsPage() {
                         </div>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                    {/* Dropdown Menu */}
+                    <div className="relative" ref={activeMenu === account.id ? menuRef : null}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setActiveMenu(activeMenu === account.id ? null : account.id)}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                      {activeMenu === account.id && (
+                        <div className="absolute right-0 top-full mt-1 w-36 bg-background-card border border-border rounded-md shadow-lg z-10">
+                          <button
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                            onClick={() => handleEditClick(account)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </button>
+                          <button
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red hover:bg-muted/50 transition-colors"
+                            onClick={() => handleDeleteClick(account)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
