@@ -1,0 +1,481 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Header } from "@/components/layout/header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
+import type { TradeInsert } from "@/lib/types/database";
+
+const directionOptions = [
+  { value: "LONG", label: "Long" },
+  { value: "SHORT", label: "Short" },
+];
+
+const sessionOptions = [
+  { value: "AS", label: "Asian" },
+  { value: "LO", label: "London" },
+  { value: "NY", label: "New York" },
+  { value: "OTHER", label: "Other" },
+];
+
+const marketOptions = [
+  { value: "crypto", label: "Crypto" },
+  { value: "forex", label: "Forex" },
+  { value: "stocks", label: "Stocks" },
+  { value: "futures", label: "Futures" },
+  { value: "options", label: "Options" },
+];
+
+const timeframeOptions = [
+  { value: "1m", label: "1 Minute" },
+  { value: "5m", label: "5 Minutes" },
+  { value: "15m", label: "15 Minutes" },
+  { value: "1h", label: "1 Hour" },
+  { value: "4h", label: "4 Hours" },
+  { value: "1d", label: "Daily" },
+];
+
+const statusOptions = [
+  { value: "open", label: "Open" },
+  { value: "closed", label: "Closed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export default function NewTradePage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const supabase = createClient();
+
+  const [formData, setFormData] = useState({
+    title: "",
+    security: "",
+    market: "crypto",
+    direction: "LONG",
+    entryDate: new Date().toISOString().slice(0, 16),
+    exitDate: "",
+    timeframe: "1m",
+    session: "NY",
+    entryPrice: "",
+    exitPrice: "",
+    stopLoss: "",
+    takeProfit: "",
+    riskPercent: "",
+    riskAmount: "",
+    pnl: "",
+    pnlPercent: "",
+    riskRewardActual: "",
+    status: "closed",
+    setupNotes: "",
+    executionNotes: "",
+    reviewNotes: "",
+    mistake: "",
+    lesson: "",
+    chartUrl: "",
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const tradeData: TradeInsert = {
+        user_id: user.id,
+        title: formData.title,
+        security: formData.security.toUpperCase(),
+        market: formData.market as "crypto" | "forex" | "stocks" | "futures" | "options",
+        direction: formData.direction as "LONG" | "SHORT",
+        entry_date: formData.entryDate,
+        exit_date: formData.exitDate || null,
+        timeframe: formData.timeframe,
+        session: formData.session as "AS" | "LO" | "NY" | "OTHER",
+        entry_price: formData.entryPrice ? parseFloat(formData.entryPrice) : null,
+        exit_price: formData.exitPrice ? parseFloat(formData.exitPrice) : null,
+        stop_loss: formData.stopLoss ? parseFloat(formData.stopLoss) : null,
+        take_profit: formData.takeProfit ? parseFloat(formData.takeProfit) : null,
+        risk_percent: formData.riskPercent ? parseFloat(formData.riskPercent) : null,
+        risk_amount: formData.riskAmount ? parseFloat(formData.riskAmount) : null,
+        pnl: formData.pnl ? parseFloat(formData.pnl) : null,
+        pnl_percent: formData.pnlPercent ? parseFloat(formData.pnlPercent) : null,
+        risk_reward_actual: formData.riskRewardActual
+          ? parseFloat(formData.riskRewardActual)
+          : null,
+        status: formData.status as "open" | "closed" | "cancelled",
+        setup_notes: formData.setupNotes || null,
+        execution_notes: formData.executionNotes || null,
+        review_notes: formData.reviewNotes || null,
+        mistake: formData.mistake || null,
+        lesson: formData.lesson || null,
+        chart_url: formData.chartUrl || null,
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await supabase.from("trades").insert(tradeData as any);
+
+      if (error) throw error;
+
+      router.push("/trades");
+    } catch (error) {
+      console.error("Error creating trade:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <Header title="New Trade" description="Log a new trade entry" />
+
+      <div className="flex-1 overflow-auto p-6">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+          {/* Back Button */}
+          <Link href="/trades">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Trades
+            </Button>
+          </Link>
+
+          {/* Basic Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Trade Title</Label>
+                <Input
+                  id="title"
+                  name="title"
+                  placeholder="SOL/USDT (1m)"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="security">Security/Symbol</Label>
+                <Input
+                  id="security"
+                  name="security"
+                  placeholder="SOL/USDT"
+                  value={formData.security}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="market">Market</Label>
+                <Select
+                  id="market"
+                  name="market"
+                  options={marketOptions}
+                  value={formData.market}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="direction">Direction</Label>
+                <Select
+                  id="direction"
+                  name="direction"
+                  options={directionOptions}
+                  value={formData.direction}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="session">Session</Label>
+                <Select
+                  id="session"
+                  name="session"
+                  options={sessionOptions}
+                  value={formData.session}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="timeframe">Timeframe</Label>
+                <Select
+                  id="timeframe"
+                  name="timeframe"
+                  options={timeframeOptions}
+                  value={formData.timeframe}
+                  onChange={handleChange}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Timing */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Timing</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="entryDate">Entry Date/Time</Label>
+                <Input
+                  id="entryDate"
+                  name="entryDate"
+                  type="datetime-local"
+                  value={formData.entryDate}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="exitDate">Exit Date/Time</Label>
+                <Input
+                  id="exitDate"
+                  name="exitDate"
+                  type="datetime-local"
+                  value={formData.exitDate}
+                  onChange={handleChange}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Prices & Risk */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Prices & Risk Management</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="entryPrice">Entry Price</Label>
+                <Input
+                  id="entryPrice"
+                  name="entryPrice"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  value={formData.entryPrice}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="exitPrice">Exit Price</Label>
+                <Input
+                  id="exitPrice"
+                  name="exitPrice"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  value={formData.exitPrice}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stopLoss">Stop Loss</Label>
+                <Input
+                  id="stopLoss"
+                  name="stopLoss"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  value={formData.stopLoss}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="takeProfit">Take Profit</Label>
+                <Input
+                  id="takeProfit"
+                  name="takeProfit"
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  value={formData.takeProfit}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="riskPercent">Risk %</Label>
+                <Input
+                  id="riskPercent"
+                  name="riskPercent"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.10"
+                  value={formData.riskPercent}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="riskAmount">Risk Amount ($)</Label>
+                <Input
+                  id="riskAmount"
+                  name="riskAmount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.riskAmount}
+                  onChange={handleChange}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Results */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Results</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pnl">P&L ($)</Label>
+                <Input
+                  id="pnl"
+                  name="pnl"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.pnl}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pnlPercent">P&L %</Label>
+                <Input
+                  id="pnlPercent"
+                  name="pnlPercent"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.pnlPercent}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="riskRewardActual">Actual R:R</Label>
+                <Input
+                  id="riskRewardActual"
+                  name="riskRewardActual"
+                  type="number"
+                  step="0.1"
+                  placeholder="0.0"
+                  value={formData.riskRewardActual}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  id="status"
+                  name="status"
+                  options={statusOptions}
+                  value={formData.status}
+                  onChange={handleChange}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes & Learning</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="setupNotes">Setup Notes</Label>
+                <Textarea
+                  id="setupNotes"
+                  name="setupNotes"
+                  placeholder="Describe your trade setup and analysis..."
+                  value={formData.setupNotes}
+                  onChange={handleChange}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="executionNotes">Execution Notes</Label>
+                <Textarea
+                  id="executionNotes"
+                  name="executionNotes"
+                  placeholder="How did you execute the trade..."
+                  value={formData.executionNotes}
+                  onChange={handleChange}
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mistake">Mistake</Label>
+                  <Textarea
+                    id="mistake"
+                    name="mistake"
+                    placeholder="What went wrong..."
+                    value={formData.mistake}
+                    onChange={handleChange}
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lesson">Lesson</Label>
+                  <Textarea
+                    id="lesson"
+                    name="lesson"
+                    placeholder="What did you learn..."
+                    value={formData.lesson}
+                    onChange={handleChange}
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="chartUrl">Chart URL</Label>
+                <Input
+                  id="chartUrl"
+                  name="chartUrl"
+                  type="url"
+                  placeholder="https://tradingview.com/..."
+                  value={formData.chartUrl}
+                  onChange={handleChange}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Submit */}
+          <div className="flex justify-end gap-4">
+            <Link href="/trades">
+              <Button variant="outline" type="button">
+                Cancel
+              </Button>
+            </Link>
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Trade
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
