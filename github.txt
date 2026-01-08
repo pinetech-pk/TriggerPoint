@@ -6,3 +6,8 @@ git remote -v
 
 ======================
 git pull origin main
+
+======================
+git add .
+git commit -m "chore: the Specification for Claude Code Agent"
+git push -u origin main --force
