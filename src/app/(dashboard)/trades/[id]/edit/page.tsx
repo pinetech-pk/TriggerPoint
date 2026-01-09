@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Loader2, Calculator } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
-import type { TradeInsert, Account, Strategy } from "@/lib/types/database";
+import type { Trade, Account, Strategy } from "@/lib/types/database";
 
 const directionOptions = [
   { value: "LONG", label: "Long" },
@@ -49,9 +49,13 @@ const statusOptions = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-export default function NewTradePage() {
+export default function EditTradePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const tradeId = params.id as string;
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [accountSize, setAccountSize] = useState<number>(0);
@@ -64,7 +68,7 @@ export default function NewTradePage() {
     direction: "LONG",
     accountId: "",
     strategyId: "",
-    entryDate: new Date().toISOString().slice(0, 16),
+    entryDate: "",
     exitDate: "",
     timeframe: "1m",
     session: "NY",
@@ -86,20 +90,55 @@ export default function NewTradePage() {
     chartUrl: "",
   });
 
-  // Fetch accounts and strategies
+  // Fetch trade data, accounts, and strategies
   useEffect(() => {
     async function fetchData() {
-      const [accountsRes, strategiesRes] = await Promise.all([
+      const [tradeRes, accountsRes, strategiesRes] = await Promise.all([
+        supabase.from("trades").select("*").eq("id", tradeId).single() as unknown as Promise<{ data: Trade | null; error: any }>,
         supabase.from("accounts").select("*").eq("is_active", true).order("name") as unknown as Promise<{ data: Account[] | null; error: any }>,
         supabase.from("strategies").select("*").eq("is_active", true).order("name") as unknown as Promise<{ data: Strategy[] | null; error: any }>,
       ]);
 
       if (accountsRes.data) setAccounts(accountsRes.data);
       if (strategiesRes.data) setStrategies(strategiesRes.data);
+
+      if (tradeRes.data) {
+        const trade = tradeRes.data;
+        setFormData({
+          title: trade.title || "",
+          security: trade.security || "",
+          market: trade.market || "crypto",
+          direction: trade.direction || "LONG",
+          accountId: trade.account_id || "",
+          strategyId: trade.strategy_id || "",
+          entryDate: trade.entry_date ? trade.entry_date.slice(0, 16) : "",
+          exitDate: trade.exit_date ? trade.exit_date.slice(0, 16) : "",
+          timeframe: trade.timeframe || "1m",
+          session: trade.session || "NY",
+          entryPrice: trade.entry_price?.toString() || "",
+          exitPrice: trade.exit_price?.toString() || "",
+          stopLoss: trade.stop_loss?.toString() || "",
+          takeProfit: trade.take_profit?.toString() || "",
+          riskPercent: trade.risk_percent?.toString() || "",
+          riskAmount: trade.risk_amount?.toString() || "",
+          pnl: trade.pnl?.toString() || "",
+          pnlPercent: trade.pnl_percent?.toString() || "",
+          riskRewardActual: trade.risk_reward_actual?.toString() || "",
+          status: trade.status || "closed",
+          setupNotes: trade.setup_notes || "",
+          executionNotes: trade.execution_notes || "",
+          reviewNotes: trade.review_notes || "",
+          mistake: trade.mistake || "",
+          lesson: trade.lesson || "",
+          chartUrl: trade.chart_url || "",
+        });
+      }
+
+      setLoading(false);
     }
 
     fetchData();
-  }, [supabase]);
+  }, [supabase, tradeId]);
 
   // Update account size when account changes
   useEffect(() => {
@@ -122,8 +161,8 @@ export default function NewTradePage() {
         return riskPct.toFixed(2);
       }
     }
-    return "";
-  }, [accountSize, formData.riskAmount]);
+    return formData.riskPercent;
+  }, [accountSize, formData.riskAmount, formData.riskPercent]);
 
   // Auto-calculate PnL % when PnL or Account changes
   const calculatePnlPercent = useCallback(() => {
@@ -134,8 +173,8 @@ export default function NewTradePage() {
         return pnlPct.toFixed(2);
       }
     }
-    return "";
-  }, [accountSize, formData.pnl]);
+    return formData.pnlPercent;
+  }, [accountSize, formData.pnl, formData.pnlPercent]);
 
   // Auto-calculate RRx when Risk Amount and PnL are available
   const calculateRRx = useCallback(() => {
@@ -147,22 +186,28 @@ export default function NewTradePage() {
         return rrx.toFixed(2);
       }
     }
-    return "";
-  }, [formData.riskAmount, formData.pnl]);
+    return formData.riskRewardActual;
+  }, [formData.riskAmount, formData.pnl, formData.riskRewardActual]);
 
-  // Update calculated values
+  // Update calculated values when inputs change
   useEffect(() => {
-    const newRiskPercent = calculateRiskPercent();
-    const newPnlPercent = calculatePnlPercent();
-    const newRRx = calculateRRx();
+    if (!loading) {
+      const newRiskPercent = calculateRiskPercent();
+      const newPnlPercent = calculatePnlPercent();
+      const newRRx = calculateRRx();
 
-    setFormData((prev) => ({
-      ...prev,
-      riskPercent: newRiskPercent,
-      pnlPercent: newPnlPercent,
-      riskRewardActual: newRRx,
-    }));
-  }, [calculateRiskPercent, calculatePnlPercent, calculateRRx]);
+      if (newRiskPercent !== formData.riskPercent ||
+          newPnlPercent !== formData.pnlPercent ||
+          newRRx !== formData.riskRewardActual) {
+        setFormData((prev) => ({
+          ...prev,
+          riskPercent: newRiskPercent,
+          pnlPercent: newPnlPercent,
+          riskRewardActual: newRRx,
+        }));
+      }
+    }
+  }, [loading, accountSize, formData.riskAmount, formData.pnl]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -173,34 +218,24 @@ export default function NewTradePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
       // Determine is_winner based on PnL
       const pnlValue = formData.pnl ? parseFloat(formData.pnl) : null;
       const isWinner = pnlValue !== null ? pnlValue > 0 : null;
 
-      const tradeData: TradeInsert = {
-        user_id: user.id,
+      const updateData = {
         account_id: formData.accountId || null,
         strategy_id: formData.strategyId || null,
         title: formData.title,
         security: formData.security.toUpperCase(),
-        market: formData.market as "crypto" | "forex" | "stocks" | "futures" | "options",
-        direction: formData.direction as "LONG" | "SHORT",
+        market: formData.market,
+        direction: formData.direction,
         entry_date: formData.entryDate,
         exit_date: formData.exitDate || null,
         timeframe: formData.timeframe,
-        session: formData.session as "AS" | "LO" | "NY" | "OTHER",
+        session: formData.session,
         entry_price: formData.entryPrice ? parseFloat(formData.entryPrice) : null,
         exit_price: formData.exitPrice ? parseFloat(formData.exitPrice) : null,
         stop_loss: formData.stopLoss ? parseFloat(formData.stopLoss) : null,
@@ -213,7 +248,7 @@ export default function NewTradePage() {
           ? parseFloat(formData.riskRewardActual)
           : null,
         is_winner: isWinner,
-        status: formData.status as "open" | "closed" | "cancelled",
+        status: formData.status,
         setup_notes: formData.setupNotes || null,
         execution_notes: formData.executionNotes || null,
         review_notes: formData.reviewNotes || null,
@@ -222,15 +257,18 @@ export default function NewTradePage() {
         chart_url: formData.chartUrl || null,
       };
 
-      const { error } = await supabase.from("trades").insert(tradeData as any);
+      const { error } = await (supabase
+        .from("trades") as any)
+        .update(updateData)
+        .eq("id", tradeId);
 
       if (error) throw error;
 
       router.push("/trades");
     } catch (error) {
-      console.error("Error creating trade:", error);
+      console.error("Error updating trade:", error);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -245,9 +283,20 @@ export default function NewTradePage() {
     ...strategies.map((s) => ({ value: s.id, label: s.name })),
   ];
 
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full">
+        <Header title="Edit Trade" description="Loading trade data..." />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
-      <Header title="New Trade" description="Log a new trade entry" />
+      <Header title="Edit Trade" description="Update trade details" />
 
       <div className="flex-1 overflow-auto p-6">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
@@ -600,9 +649,9 @@ export default function NewTradePage() {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Trade
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
             </Button>
           </div>
         </form>
