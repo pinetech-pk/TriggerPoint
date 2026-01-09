@@ -98,6 +98,7 @@ export interface Database {
           entry_criteria: string | null;
           exit_criteria: string | null;
           risk_management: string | null;
+          tradingview_url: string | null;
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -112,6 +113,7 @@ export interface Database {
           entry_criteria?: string | null;
           exit_criteria?: string | null;
           risk_management?: string | null;
+          tradingview_url?: string | null;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -124,6 +126,7 @@ export interface Database {
           entry_criteria?: string | null;
           exit_criteria?: string | null;
           risk_management?: string | null;
+          tradingview_url?: string | null;
           is_active?: boolean;
           updated_at?: string;
         };
