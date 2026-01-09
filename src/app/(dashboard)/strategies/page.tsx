@@ -60,6 +60,7 @@ export default function StrategiesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [formError, setFormError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const supabase = createClient();
@@ -142,10 +143,11 @@ export default function StrategiesPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setFormError(null);
 
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
-      console.error("No user found");
+      setFormError("No user found. Please log in again.");
       setSubmitting(false);
       return;
     }
@@ -155,7 +157,8 @@ export default function StrategiesPage() {
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0);
 
-    const { error } = await (supabase.from("strategies") as any).insert({
+    // Try without tradingview_url first if column might not exist
+    const insertData: Record<string, unknown> = {
       user_id: userData.user.id,
       name: formData.name,
       description: formData.description || null,
@@ -163,12 +166,19 @@ export default function StrategiesPage() {
       entry_criteria: formData.entry_criteria || null,
       exit_criteria: formData.exit_criteria || null,
       risk_management: formData.risk_management || null,
-      tradingview_url: formData.tradingview_url || null,
       is_active: formData.is_active,
-    });
+    };
+
+    // Only add tradingview_url if it has a value
+    if (formData.tradingview_url) {
+      insertData.tradingview_url = formData.tradingview_url;
+    }
+
+    const { error } = await (supabase.from("strategies") as any).insert(insertData);
 
     if (error) {
       console.error("Error creating strategy:", error);
+      setFormError(error.message || "Failed to create strategy");
     } else {
       setDialogOpen(false);
       setFormData(initialFormData);
@@ -200,28 +210,36 @@ export default function StrategiesPage() {
     e.preventDefault();
     if (!selectedStrategy) return;
     setSubmitting(true);
+    setFormError(null);
 
     const tagsArray = formData.tags
       .split(",")
       .map((tag) => tag.trim())
       .filter((tag) => tag.length > 0);
 
+    const updateData: Record<string, unknown> = {
+      name: formData.name,
+      description: formData.description || null,
+      tags: tagsArray,
+      entry_criteria: formData.entry_criteria || null,
+      exit_criteria: formData.exit_criteria || null,
+      risk_management: formData.risk_management || null,
+      is_active: formData.is_active,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only add tradingview_url if it has a value
+    if (formData.tradingview_url) {
+      updateData.tradingview_url = formData.tradingview_url;
+    }
+
     const { error } = await (supabase.from("strategies") as any)
-      .update({
-        name: formData.name,
-        description: formData.description || null,
-        tags: tagsArray,
-        entry_criteria: formData.entry_criteria || null,
-        exit_criteria: formData.exit_criteria || null,
-        risk_management: formData.risk_management || null,
-        tradingview_url: formData.tradingview_url || null,
-        is_active: formData.is_active,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", selectedStrategy.id);
 
     if (error) {
       console.error("Error updating strategy:", error);
+      setFormError(error.message || "Failed to update strategy");
     } else {
       setEditDialogOpen(false);
       setSelectedStrategy(null);
@@ -388,6 +406,11 @@ export default function StrategiesPage() {
               <DialogTitle>Create New Strategy</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
+              {formError && (
+                <div className="p-3 text-sm text-red bg-red/10 border border-red/20 rounded-md">
+                  {formError}
+                </div>
+              )}
               {renderFormFields()}
               <div className="flex justify-end gap-3 pt-2">
                 <Button
@@ -396,6 +419,7 @@ export default function StrategiesPage() {
                   onClick={() => {
                     setDialogOpen(false);
                     setFormData(initialFormData);
+                    setFormError(null);
                   }}
                 >
                   Cancel
@@ -422,6 +446,11 @@ export default function StrategiesPage() {
               <DialogTitle>Edit Strategy</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleUpdate} className="space-y-4">
+              {formError && (
+                <div className="p-3 text-sm text-red bg-red/10 border border-red/20 rounded-md">
+                  {formError}
+                </div>
+              )}
               {renderFormFields()}
               <div className="flex justify-end gap-3 pt-2">
                 <Button
@@ -430,6 +459,7 @@ export default function StrategiesPage() {
                   onClick={() => {
                     setEditDialogOpen(false);
                     setFormData(initialFormData);
+                    setFormError(null);
                   }}
                 >
                   Cancel
