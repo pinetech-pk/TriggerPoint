@@ -276,9 +276,9 @@ export default function StrategiesPage() {
     setActiveMenu(null);
   };
 
-  // Strategy form component (reused for create and edit)
-  const StrategyForm = ({ onSubmit, isEdit }: { onSubmit: (e: React.FormEvent) => void; isEdit: boolean }) => (
-    <form onSubmit={onSubmit} className="space-y-4">
+  // Form fields JSX - inlined to prevent focus loss on re-render
+  const renderFormFields = () => (
+    <>
       <div className="space-y-2">
         <Label htmlFor="name">Strategy Name *</Label>
         <Input
@@ -363,31 +363,7 @@ export default function StrategiesPage() {
           Active strategy
         </Label>
       </div>
-      <div className="flex justify-end gap-3 pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            isEdit ? setEditDialogOpen(false) : setDialogOpen(false);
-            setFormData(initialFormData);
-          }}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {isEdit ? "Updating..." : "Creating..."}
-            </>
-          ) : isEdit ? (
-            "Update Strategy"
-          ) : (
-            "Create Strategy"
-          )}
-        </Button>
-      </div>
-    </form>
+    </>
   );
 
   return (
@@ -411,7 +387,31 @@ export default function StrategiesPage() {
             <DialogHeader>
               <DialogTitle>Create New Strategy</DialogTitle>
             </DialogHeader>
-            <StrategyForm onSubmit={handleCreate} isEdit={false} />
+            <form onSubmit={handleCreate} className="space-y-4">
+              {renderFormFields()}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDialogOpen(false);
+                    setFormData(initialFormData);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Strategy"
+                  )}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -421,7 +421,31 @@ export default function StrategiesPage() {
             <DialogHeader>
               <DialogTitle>Edit Strategy</DialogTitle>
             </DialogHeader>
-            <StrategyForm onSubmit={handleUpdate} isEdit={true} />
+            <form onSubmit={handleUpdate} className="space-y-4">
+              {renderFormFields()}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditDialogOpen(false);
+                    setFormData(initialFormData);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Strategy"
+                  )}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
 
