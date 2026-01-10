@@ -8,6 +8,7 @@ import {
   DollarSign,
   BarChart3,
   Award,
+  Repeat,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -30,6 +31,7 @@ interface TradeStats {
   avg_win: number;
   avg_loss: number;
   profit_factor: number;
+  avg_risk_reward: number;
 }
 
 interface EquityPoint {
@@ -76,12 +78,61 @@ const SESSION_OPTIONS = [
   { value: "OTHER", label: "Other" },
 ];
 
+const TIME_RANGE_OPTIONS = [
+  { value: "", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "3days", label: "Last 3 Days" },
+  { value: "7days", label: "Last 7 Days" },
+  { value: "30days", label: "Last 30 Days" },
+  { value: "60days", label: "Last 60 Days" },
+];
+
 const SESSION_COLORS: Record<string, string> = {
   NY: "bg-green",
   LO: "bg-blue",
   AS: "bg-purple",
   OTHER: "bg-gray-500",
 };
+
+// Helper function to calculate date range
+function getDateRange(timeRange: string): { startDate?: string; endDate?: string } {
+  if (!timeRange) return {};
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let startDate: Date;
+  let endDate: Date = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1); // End of today
+
+  switch (timeRange) {
+    case "today":
+      startDate = today;
+      break;
+    case "yesterday":
+      startDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      endDate = new Date(today.getTime() - 1); // End of yesterday
+      break;
+    case "3days":
+      startDate = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
+      break;
+    case "7days":
+      startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case "30days":
+      startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case "60days":
+      startDate = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
+      break;
+    default:
+      return {};
+  }
+
+  return {
+    startDate: startDate.toISOString().split("T")[0],
+    endDate: endDate.toISOString().split("T")[0],
+  };
+}
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -92,6 +143,7 @@ export default function DashboardPage() {
   const [selectedAccount, setSelectedAccount] = useState("");
   const [selectedStrategy, setSelectedStrategy] = useState("");
   const [selectedSession, setSelectedSession] = useState("");
+  const [selectedTimeRange, setSelectedTimeRange] = useState("7days");
 
   // Data states
   const [stats, setStats] = useState<TradeStats | null>(null);
@@ -131,6 +183,7 @@ export default function DashboardPage() {
 
       const accountId = selectedAccount || undefined;
       const strategyId = selectedStrategy || undefined;
+      const { startDate, endDate } = getDateRange(selectedTimeRange);
 
       // Fetch all data in parallel using untyped RPC calls
       const rpc = supabase.rpc.bind(supabase) as any;
@@ -139,6 +192,8 @@ export default function DashboardPage() {
           p_user_id: user.id,
           p_account_id: accountId,
           p_strategy_id: strategyId,
+          p_start_date: startDate,
+          p_end_date: endDate,
         }),
         rpc("get_equity_curve", {
           p_user_id: user.id,
@@ -148,6 +203,8 @@ export default function DashboardPage() {
         rpc("get_daily_pnl", {
           p_user_id: user.id,
           p_account_id: accountId,
+          p_start_date: startDate,
+          p_end_date: endDate,
         }),
         rpc("get_performance_by_strategy", {
           p_user_id: user.id,
@@ -194,7 +251,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase, selectedAccount, selectedStrategy, selectedSession]);
+  }, [supabase, selectedAccount, selectedStrategy, selectedSession, selectedTimeRange]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -255,13 +312,25 @@ export default function DashboardPage() {
               onChange={(e) => setSelectedSession(e.target.value)}
             />
           </div>
+          <div className="w-48">
+            <Select
+              options={TIME_RANGE_OPTIONS}
+              value={selectedTimeRange}
+              onChange={(e) => setSelectedTimeRange(e.target.value)}
+            />
+          </div>
         </div>
 
         {loading ? (
           // Loading skeleton
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} className="h-24" />
               ))}
             </div>
@@ -280,14 +349,8 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              <StatCard
-                title="Total Trades"
-                value={stats.total_trades}
-                subValue={`${stats.winning_trades}W / ${stats.losing_trades}L`}
-                icon={BarChart3}
-              />
+            {/* Primary Stats Row - Key Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
                 title="Win Rate"
                 value={`${stats.win_rate.toFixed(1)}%`}
@@ -301,6 +364,23 @@ export default function DashboardPage() {
                 subValue={stats.total_pnl >= 0 ? "Profit" : "Loss"}
                 icon={DollarSign}
                 trend={stats.total_pnl >= 0 ? "up" : "down"}
+              />
+              <StatCard
+                title="Avg RRx"
+                value={`${(stats.avg_risk_reward || 0).toFixed(2)}R`}
+                subValue="Risk-to-Reward"
+                icon={Repeat}
+                trend={(stats.avg_risk_reward || 0) >= 1 ? "up" : "down"}
+              />
+            </div>
+
+            {/* Secondary Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Total Trades"
+                value={stats.total_trades}
+                subValue={`${stats.winning_trades}W / ${stats.losing_trades}L`}
+                icon={BarChart3}
               />
               <StatCard
                 title="Avg Win"
