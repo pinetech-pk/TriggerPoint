@@ -181,71 +181,163 @@ export default function DashboardPage() {
         return;
       }
 
-      const accountId = selectedAccount || undefined;
-      const strategyId = selectedStrategy || undefined;
       const { startDate, endDate } = getDateRange(selectedTimeRange);
 
-      // Fetch all data in parallel using untyped RPC calls
-      const rpc = supabase.rpc.bind(supabase) as any;
-      const [statsRes, equityRes, dailyRes, strategyRes, sessionRes] = await Promise.all([
-        rpc("calculate_trade_stats", {
-          p_user_id: user.id,
-          p_account_id: accountId,
-          p_strategy_id: strategyId,
-          p_start_date: startDate,
-          p_end_date: endDate,
-        }),
-        rpc("get_equity_curve", {
-          p_user_id: user.id,
-          p_account_id: accountId,
-          p_initial_capital: 100,
-        }),
-        rpc("get_daily_pnl", {
-          p_user_id: user.id,
-          p_account_id: accountId,
-          p_start_date: startDate,
-          p_end_date: endDate,
-        }),
-        rpc("get_performance_by_strategy", {
-          p_user_id: user.id,
-          p_account_id: accountId,
-        }),
-        rpc("get_performance_by_session", {
-          p_user_id: user.id,
-          p_account_id: accountId,
-        }),
-      ]);
+      // Build the query for trades
+      let tradesQuery = supabase
+        .from("trades")
+        .select("*")
+        .eq("user_id", user.id);
 
-      if (statsRes.data) {
-        const s = statsRes.data as TradeStats;
-        setStats(s);
+      if (selectedAccount) {
+        tradesQuery = tradesQuery.eq("account_id", selectedAccount);
+      }
+      if (selectedStrategy) {
+        tradesQuery = tradesQuery.eq("strategy_id", selectedStrategy);
+      }
+      if (selectedSession) {
+        tradesQuery = tradesQuery.eq("session", selectedSession);
+      }
+      if (startDate) {
+        tradesQuery = tradesQuery.gte("entry_date", startDate);
+      }
+      if (endDate) {
+        tradesQuery = tradesQuery.lte("entry_date", endDate);
       }
 
-      if (equityRes.data) {
-        setEquityData(equityRes.data as EquityPoint[]);
+      const { data: trades, error: tradesError } = await tradesQuery.order("entry_date", { ascending: true }) as { data: any[] | null; error: any };
+
+      if (tradesError) {
+        console.error("Error fetching trades:", tradesError);
+        setLoading(false);
+        return;
       }
 
-      if (dailyRes.data) {
-        setDailyPnL(dailyRes.data as DailyPnL[]);
-      }
+      const allTrades = (trades || []) as any[];
 
-      if (strategyRes.data) {
-        let strategyData = strategyRes.data as StrategyPerformance[];
-        // Filter by selected strategy if set
-        if (selectedStrategy) {
-          strategyData = strategyData.filter(s => s.strategy_id === selectedStrategy);
+      // Calculate stats from trades
+      const totalTrades = allTrades.length;
+      const winners = allTrades.filter(t => t.is_winner === true);
+      const losers = allTrades.filter(t => t.is_winner === false);
+      const winningTrades = winners.length;
+      const losingTrades = losers.length;
+      const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+      const totalPnl = allTrades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+      const avgWin = winningTrades > 0 ? winners.reduce((sum, t) => sum + (t.pnl || 0), 0) / winningTrades : 0;
+      const avgLoss = losingTrades > 0 ? losers.reduce((sum, t) => sum + (t.pnl || 0), 0) / losingTrades : 0;
+      const totalWins = winners.reduce((sum, t) => sum + (t.pnl || 0), 0);
+      const totalLosses = Math.abs(losers.reduce((sum, t) => sum + (t.pnl || 0), 0));
+      const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
+      const totalRiskReward = allTrades.reduce((sum, t) => sum + (t.risk_reward_actual || 0), 0);
+
+      setStats({
+        total_trades: totalTrades,
+        winning_trades: winningTrades,
+        losing_trades: losingTrades,
+        win_rate: winRate,
+        total_pnl: totalPnl,
+        avg_win: avgWin,
+        avg_loss: avgLoss,
+        profit_factor: profitFactor,
+        total_risk_reward: totalRiskReward,
+      });
+
+      // Calculate equity curve
+      let cumulative = 100; // Starting capital
+      const equityPoints: EquityPoint[] = allTrades.map((trade, index) => {
+        cumulative += trade.pnl || 0;
+        return {
+          trade_number: index + 1,
+          trade_date: trade.entry_date,
+          trade_pnl: trade.pnl || 0,
+          cumulative_pnl: cumulative - 100,
+          equity: cumulative,
+        };
+      });
+      setEquityData(equityPoints);
+
+      // Calculate daily P&L
+      const dailyMap = new Map<string, { pnl: number; count: number; wins: number }>();
+      allTrades.forEach(trade => {
+        const date = trade.entry_date?.split("T")[0] || trade.entry_date;
+        const existing = dailyMap.get(date) || { pnl: 0, count: 0, wins: 0 };
+        existing.pnl += trade.pnl || 0;
+        existing.count += 1;
+        if (trade.is_winner) existing.wins += 1;
+        dailyMap.set(date, existing);
+      });
+      const dailyData: DailyPnL[] = Array.from(dailyMap.entries()).map(([date, data]) => ({
+        date,
+        total_pnl: data.pnl,
+        trade_count: data.count,
+        winning_trades: data.wins,
+        win_rate: data.count > 0 ? (data.wins / data.count) * 100 : 0,
+      }));
+      setDailyPnL(dailyData);
+
+      // Calculate strategy performance
+      const strategyMap = new Map<string, { name: string; trades: typeof allTrades }>();
+      allTrades.forEach(trade => {
+        if (trade.strategy_id) {
+          const existing = strategyMap.get(trade.strategy_id) || { name: "", trades: [] };
+          existing.trades.push(trade);
+          strategyMap.set(trade.strategy_id, existing);
         }
-        setStrategyPerformance(strategyData);
+      });
+
+      // Fetch strategy names
+      const strategyIds = Array.from(strategyMap.keys());
+      if (strategyIds.length > 0) {
+        const { data: strategiesData } = await supabase
+          .from("strategies")
+          .select("id, name")
+          .in("id", strategyIds) as { data: { id: string; name: string }[] | null; error: any };
+
+        strategiesData?.forEach(s => {
+          const existing = strategyMap.get(s.id);
+          if (existing) existing.name = s.name;
+        });
       }
 
-      if (sessionRes.data) {
-        let sessionData = sessionRes.data as SessionPerformance[];
-        // Filter by selected session if set
-        if (selectedSession) {
-          sessionData = sessionData.filter(s => s.session === selectedSession);
-        }
-        setSessionPerformance(sessionData);
-      }
+      const strategyPerf: StrategyPerformance[] = Array.from(strategyMap.entries()).map(([id, data]) => {
+        const stratTrades = data.trades;
+        const stratWins = stratTrades.filter(t => t.is_winner === true);
+        return {
+          strategy_id: id,
+          strategy_name: data.name || "Unknown",
+          total_trades: stratTrades.length,
+          winning_trades: stratWins.length,
+          win_rate: stratTrades.length > 0 ? (stratWins.length / stratTrades.length) * 100 : 0,
+          total_pnl: stratTrades.reduce((sum, t) => sum + (t.pnl || 0), 0),
+          avg_pnl: stratTrades.length > 0 ? stratTrades.reduce((sum, t) => sum + (t.pnl || 0), 0) / stratTrades.length : 0,
+          avg_risk_reward: stratTrades.length > 0 ? stratTrades.reduce((sum, t) => sum + (t.risk_reward_actual || 0), 0) / stratTrades.length : 0,
+        };
+      });
+      setStrategyPerformance(strategyPerf);
+
+      // Calculate session performance
+      const sessionMap = new Map<string, typeof allTrades>();
+      const sessionNames: Record<string, string> = { AS: "Asian", LO: "London", NY: "New York", OTHER: "Other" };
+      allTrades.forEach(trade => {
+        const session = trade.session || "OTHER";
+        const existing = sessionMap.get(session) || [];
+        existing.push(trade);
+        sessionMap.set(session, existing);
+      });
+
+      const sessionPerf: SessionPerformance[] = Array.from(sessionMap.entries()).map(([session, sessTrades]) => {
+        const sessWins = sessTrades.filter(t => t.is_winner === true);
+        return {
+          session,
+          session_name: sessionNames[session] || session,
+          total_trades: sessTrades.length,
+          winning_trades: sessWins.length,
+          win_rate: sessTrades.length > 0 ? (sessWins.length / sessTrades.length) * 100 : 0,
+          total_pnl: sessTrades.reduce((sum, t) => sum + (t.pnl || 0), 0),
+        };
+      });
+      setSessionPerformance(sessionPerf);
+
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
