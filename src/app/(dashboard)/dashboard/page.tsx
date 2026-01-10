@@ -31,7 +31,7 @@ interface TradeStats {
   avg_win: number;
   avg_loss: number;
   profit_factor: number;
-  avg_risk_reward: number;
+  total_risk_reward: number;
 }
 
 interface EquityPoint {
@@ -366,11 +366,11 @@ export default function DashboardPage() {
                 trend={stats.total_pnl >= 0 ? "up" : "down"}
               />
               <StatCard
-                title="Avg RRx"
-                value={`${(stats.avg_risk_reward || 0).toFixed(2)}R`}
+                title="Total RRx"
+                value={`${(stats.total_risk_reward || 0).toFixed(2)}R`}
                 subValue="Risk-to-Reward"
                 icon={Repeat}
-                trend={(stats.avg_risk_reward || 0) >= 1 ? "up" : "down"}
+                trend={(stats.total_risk_reward || 0) >= 0 ? "up" : "down"}
               />
             </div>
 
