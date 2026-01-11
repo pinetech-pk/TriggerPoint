@@ -110,35 +110,42 @@ function getDateRange(timeRange: string): { startDate?: string; endDate?: string
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let startDate: Date;
-  let endDate: Date = today; // Today
+  let endDate: Date;
 
   switch (timeRange) {
     case "today":
       startDate = today;
+      endDate = today;
       break;
     case "yesterday":
       startDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-      endDate = new Date(today.getTime() - 24 * 60 * 60 * 1000); // Yesterday only
+      endDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
       break;
     case "3days":
-      startDate = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000); // Today + 2 days back = 3 days
+      startDate = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
+      endDate = today;
       break;
     case "7days":
-      startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000); // Today + 6 days back = 7 days
+      startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+      endDate = today;
       break;
     case "30days":
       startDate = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+      endDate = today;
       break;
     case "60days":
       startDate = new Date(today.getTime() - 59 * 24 * 60 * 60 * 1000);
+      endDate = today;
       break;
     default:
       return {};
   }
 
+  // Format with time boundaries to include the full day
+  // startDate at 00:00:00, endDate at 23:59:59
   return {
-    startDate: formatLocalDate(startDate),
-    endDate: formatLocalDate(endDate),
+    startDate: `${formatLocalDate(startDate)}T00:00:00`,
+    endDate: `${formatLocalDate(endDate)}T23:59:59`,
   };
 }
 
