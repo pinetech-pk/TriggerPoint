@@ -95,6 +95,14 @@ const SESSION_COLORS: Record<string, string> = {
   OTHER: "bg-gray-500",
 };
 
+// Helper function to format date as YYYY-MM-DD in local timezone
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Helper function to calculate date range
 function getDateRange(timeRange: string): { startDate?: string; endDate?: string } {
   if (!timeRange) return {};
@@ -102,7 +110,7 @@ function getDateRange(timeRange: string): { startDate?: string; endDate?: string
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let startDate: Date;
-  let endDate: Date = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1); // End of today
+  let endDate: Date = today; // Today
 
   switch (timeRange) {
     case "today":
@@ -110,27 +118,27 @@ function getDateRange(timeRange: string): { startDate?: string; endDate?: string
       break;
     case "yesterday":
       startDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-      endDate = new Date(today.getTime() - 1); // End of yesterday
+      endDate = new Date(today.getTime() - 24 * 60 * 60 * 1000); // Yesterday only
       break;
     case "3days":
-      startDate = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
+      startDate = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000); // Today + 2 days back = 3 days
       break;
     case "7days":
-      startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000); // Today + 6 days back = 7 days
       break;
     case "30days":
-      startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      startDate = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
       break;
     case "60days":
-      startDate = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
+      startDate = new Date(today.getTime() - 59 * 24 * 60 * 60 * 1000);
       break;
     default:
       return {};
   }
 
   return {
-    startDate: startDate.toISOString().split("T")[0],
-    endDate: endDate.toISOString().split("T")[0],
+    startDate: formatLocalDate(startDate),
+    endDate: formatLocalDate(endDate),
   };
 }
 
