@@ -21,12 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useSidebar } from "./sidebar-context";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface NavItem {
   name: string;
@@ -83,7 +77,7 @@ export function Sidebar({ isAdmin = false }: SidebarProps) {
     : "w-[256px]";
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <>
       {/* Mobile Overlay */}
       {isMobile && isOpen && (
         <div
@@ -187,30 +181,20 @@ export function Sidebar({ isAdmin = false }: SidebarProps) {
 
         {/* Footer */}
         <div className="border-t p-3">
-          {showLabels ? (
-            <button
-              onClick={handleSignOut}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <LogOut className="h-5 w-5 shrink-0" />
-              Sign Out
-            </button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleSignOut}
-                  className="flex w-full items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <LogOut className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Sign Out</TooltipContent>
-            </Tooltip>
-          )}
+          <button
+            onClick={handleSignOut}
+            title={!showLabels ? "Sign Out" : undefined}
+            className={cn(
+              "flex w-full items-center rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              showLabels ? "gap-3 px-3 py-2" : "justify-center p-2"
+            )}
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            {showLabels && "Sign Out"}
+          </button>
         </div>
       </aside>
-    </TooltipProvider>
+    </>
   );
 }
 
@@ -222,13 +206,14 @@ interface NavLinkProps {
 }
 
 function NavLink({ item, isActive, showLabel, onClick }: NavLinkProps) {
-  const linkContent = (
+  return (
     <Link
       href={item.href}
       onClick={onClick}
+      title={!showLabel ? item.name : undefined}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-        showLabel ? "" : "justify-center",
+        !showLabel && "justify-center",
         isActive
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -238,15 +223,4 @@ function NavLink({ item, isActive, showLabel, onClick }: NavLinkProps) {
       {showLabel && <span className="whitespace-nowrap">{item.name}</span>}
     </Link>
   );
-
-  if (!showLabel) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-        <TooltipContent side="right">{item.name}</TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return linkContent;
 }
