@@ -37,9 +37,14 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   // Load collapsed preference from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored !== null) {
-      setIsCollapsed(stored === "true");
+    if (typeof window === "undefined") return;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored !== null) {
+        setIsCollapsed(stored === "true");
+      }
+    } catch {
+      // localStorage not available
     }
   }, []);
 
@@ -81,7 +86,11 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     } else {
       setIsCollapsed((prev) => {
         const newValue = !prev;
-        localStorage.setItem(STORAGE_KEY, String(newValue));
+        try {
+          localStorage.setItem(STORAGE_KEY, String(newValue));
+        } catch {
+          // localStorage not available
+        }
         return newValue;
       });
     }
@@ -97,7 +106,11 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const handleSetCollapsed = useCallback((collapsed: boolean) => {
     setIsCollapsed(collapsed);
-    localStorage.setItem(STORAGE_KEY, String(collapsed));
+    try {
+      localStorage.setItem(STORAGE_KEY, String(collapsed));
+    } catch {
+      // localStorage not available
+    }
   }, []);
 
   return (
