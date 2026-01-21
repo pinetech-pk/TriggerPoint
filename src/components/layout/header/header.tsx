@@ -4,23 +4,40 @@ import { Bell, Search, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/components/layout/sidebar";
+import { usePermissionsContext } from "@/hooks";
 import { RoleBadge, type RoleType } from "./role-badge";
 
 interface HeaderProps {
   title: string;
   description?: string;
-  userEmail?: string;
-  role?: RoleType;
-  daysRemaining?: number;
 }
 
-export function Header({
-  title,
-  description,
-  role = "trial",
-  daysRemaining,
-}: HeaderProps) {
+// Map user role + subscription status to badge type
+function getBadgeRole(
+  role: string,
+  isAdmin: boolean,
+  subscriptionStatus: string
+): RoleType {
+  if (role === "super_admin") return "super_admin";
+  if (role === "web_admin") return "web_admin";
+
+  // Platform user - badge based on subscription
+  if (subscriptionStatus === "active") return "premium";
+  if (subscriptionStatus === "expired") return "expired";
+  return "trial"; // learning, past_due, cancelled, paused all show as trial
+}
+
+export function Header({ title, description }: HeaderProps) {
   const { open, isMobile } = useSidebar();
+  const {
+    role,
+    isAdmin,
+    subscriptionStatus,
+    daysRemaining,
+    loading
+  } = usePermissionsContext();
+
+  const badgeRole = getBadgeRole(role, isAdmin, subscriptionStatus);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 lg:h-16 lg:px-6">
@@ -72,11 +89,11 @@ export function Header({
           <span className="sr-only">Notifications</span>
         </Button>
 
-        {/* Role badge - shown on tablet and desktop */}
-        {!isMobile && (
+        {/* Role badge - shown on tablet and desktop, hidden while loading */}
+        {!isMobile && !loading && (
           <RoleBadge
-            role={role}
-            daysRemaining={daysRemaining}
+            role={badgeRole}
+            daysRemaining={badgeRole === "trial" ? daysRemaining ?? undefined : undefined}
             compact={false}
           />
         )}

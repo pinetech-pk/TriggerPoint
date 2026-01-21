@@ -2,9 +2,11 @@
 
 import { SidebarProvider, Sidebar, useSidebar } from "@/components/layout/sidebar";
 import { Footer } from "@/components/layout/footer";
+import { PermissionsProvider, usePermissionsContext } from "@/hooks";
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { isMobile, isCollapsed, isTablet } = useSidebar();
+  const { isAdmin } = usePermissionsContext();
 
   // Calculate main content margin based on sidebar state
   const sidebarWidth = isMobile
@@ -15,8 +17,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar isAdmin={false} />
+      {/* Sidebar - pass isAdmin to show admin navigation */}
+      <Sidebar isAdmin={isAdmin} />
 
       {/* Main wrapper - properly offset from sidebar */}
       <div
@@ -39,8 +41,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </SidebarProvider>
+    <PermissionsProvider>
+      <SidebarProvider>
+        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+      </SidebarProvider>
+    </PermissionsProvider>
   );
 }
