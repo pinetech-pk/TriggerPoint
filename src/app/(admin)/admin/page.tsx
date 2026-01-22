@@ -45,7 +45,7 @@ export default function AdminDashboardPage() {
         let expiredUsers = 0;
 
         if (subscriptions) {
-          for (const sub of subscriptions) {
+          for (const sub of subscriptions as any[]) {
             if (sub.status === "learning") learningUsers++;
             else if (sub.status === "active") premiumUsers++;
             else if (sub.status === "expired") expiredUsers++;
