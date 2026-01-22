@@ -137,7 +137,7 @@ export default function AdminBillingPage() {
           { email: string; full_name: string | null }
         >();
         if (profiles) {
-          for (const p of profiles) {
+          for (const p of profiles as any[]) {
             profilesMap.set(p.id, { email: p.email || "", full_name: p.full_name });
           }
         }
