@@ -46,7 +46,9 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/accounts") ||
     request.nextUrl.pathname.startsWith("/strategies") ||
     request.nextUrl.pathname.startsWith("/import") ||
-    request.nextUrl.pathname.startsWith("/settings");
+    request.nextUrl.pathname.startsWith("/settings") ||
+    request.nextUrl.pathname.startsWith("/admin");
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
@@ -58,6 +60,29 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Admin route protection - check if user has admin role
+  if (user && isAdminRoute) {
+    // Query user's roles to check for admin access
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select(`
+        roles (
+          is_admin
+        )
+      `)
+      .eq("user_id", user.id)
+      .eq("is_active", true);
+
+    // Check if any role has admin privileges
+    const hasAdminRole = userRoles?.some((ur: any) => ur.roles?.is_admin);
+
+    if (!hasAdminRole) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;
