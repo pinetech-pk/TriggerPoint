@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 530" fill="none">
+  <defs>
+
+    <!-- Bar gradient: light sky-blue top → dark navy bottom -->
+    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#80d4f8"/>
+      <stop offset="100%" stop-color="#0c4da2"/>
+    </linearGradient>
+
+    <!-- Left-bar side-face (darker) -->
+    <linearGradient id="barSide" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#5ab0e0"/>
+      <stop offset="100%" stop-color="#083b85"/>
+    </linearGradient>
+
+    <!-- Ring gradient (userSpace so it tracks the actual geometry) -->
+    <linearGradient id="ringGrad" x1="80" y1="90" x2="400" y2="315" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#70c4f8"/>
+      <stop offset="45%"  stop-color="#1e7fe8"/>
+      <stop offset="100%" stop-color="#0a3d99"/>
+    </linearGradient>
+
+    <!-- Green arrow gradient -->
+    <linearGradient id="greenGrad" x1="135" y1="295" x2="378" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#7abf28"/>
+      <stop offset="100%" stop-color="#2d6610"/>
+    </linearGradient>
+    <!-- Green highlight (lighter centre stripe) -->
+    <linearGradient id="greenHi" x1="135" y1="295" x2="378" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#aedf50"/>
+      <stop offset="100%" stop-color="#5daa1a"/>
+    </linearGradient>
+
+    <!-- Soft drop-shadow filter -->
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Subtle inner-glow on the ring -->
+    <filter id="ringGlow" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#4db8ff" flood-opacity="0.6"/>
+    </filter>
+
+  </defs>
+
+  <!-- ═══════════════════════════════════════════
+       1. BLUE ORBITAL RING  (drawn first = bottom layer)
+       ═══════════════════════════════════════════ -->
+  <ellipse
+    cx="240" cy="202"
+    rx="154" ry="108"
+    stroke="url(#ringGrad)" stroke-width="26" fill="none"
+    transform="rotate(-22, 240, 202)"
+    filter="url(#ringGlow)"/>
+
+  <!-- ═══════════════════════════════════════════
+       2. THREE BLUE BARS
+       ═══════════════════════════════════════════ -->
+
+  <!-- Left bar -->
+  <rect x="178" y="192" width="36" height="48" rx="3" fill="url(#barGrad)" filter="url(#shadow)"/>
+  <!-- left-face accent -->
+  <rect x="178" y="192" width="7" height="48" rx="2" fill="url(#barSide)" opacity="0.55"/>
+  <!-- top highlight -->
+  <rect x="178" y="192" width="36" height="5" rx="2" fill="#b8e6fa" opacity="0.5"/>
+
+  <!-- Middle bar -->
+  <rect x="222" y="170" width="36" height="70" rx="3" fill="url(#barGrad)" filter="url(#shadow)"/>
+  <rect x="222" y="170" width="7" height="70" rx="2" fill="url(#barSide)" opacity="0.55"/>
+  <rect x="222" y="170" width="36" height="5" rx="2" fill="#b8e6fa" opacity="0.5"/>
+
+  <!-- Right bar (tallest) -->
+  <rect x="266" y="140" width="36" height="100" rx="3" fill="url(#barGrad)" filter="url(#shadow)"/>
+  <rect x="266" y="140" width="7" height="100" rx="2" fill="url(#barSide)" opacity="0.55"/>
+  <rect x="266" y="140" width="36" height="5" rx="2" fill="#b8e6fa" opacity="0.5"/>
+
+  <!-- ═══════════════════════════════════════════
+       3. GREEN ARROW SWOOSH
+       Path: starts lower-left, sweeps down then arcs up-right
+       ═══════════════════════════════════════════ -->
+
+  <!-- Shadow layer -->
+  <path
+    d="M 150 262 C 136 326, 215 350, 278 326 C 325 308, 358 262, 360 182"
+    stroke="rgba(0,0,0,0.35)" stroke-width="34" fill="none" stroke-linecap="round"/>
+
+  <!-- Main body -->
+  <path
+    d="M 150 262 C 136 326, 215 350, 278 326 C 325 308, 358 262, 360 182"
+    stroke="url(#greenGrad)" stroke-width="30" fill="none" stroke-linecap="round"/>
+
+  <!-- Centre highlight stripe -->
+  <path
+    d="M 150 262 C 136 326, 215 350, 278 326 C 325 308, 358 262, 360 182"
+    stroke="url(#greenHi)" stroke-width="10" fill="none" stroke-linecap="round"/>
+
+  <!-- Arrowhead — triangle pointing upper-right at ~45° -->
+  <!-- Shadow -->
+  <polygon points="376,112 342,158 356,148 365,130" fill="rgba(0,0,0,0.3)" transform="translate(3,4)"/>
+  <!-- Body -->
+  <polygon points="376,112 336,162 362,148" fill="#3d8c12" filter="url(#shadow)"/>
+  <!-- Highlight face -->
+  <polygon points="376,112 356,152 362,148" fill="#80cc2a"/>
+
+  <!-- ═══════════════════════════════════════════
+       4. WHITE LINE-CHART OVERLAY
+       ═══════════════════════════════════════════ -->
+  <polyline
+    points="187,225 241,200 287,170"
+    stroke="white" stroke-width="3.5" fill="none"
+    stroke-linecap="round" stroke-linejoin="round"
+    filter="url(#shadow)"/>
+
+  <circle cx="187" cy="225" r="7" fill="white" filter="url(#shadow)"/>
+  <circle cx="241" cy="200" r="7" fill="white" filter="url(#shadow)"/>
+  <circle cx="287" cy="170" r="7" fill="white" filter="url(#shadow)"/>
+
+  <!-- ═══════════════════════════════════════════
+       5. LOGOTYPE
+       ═══════════════════════════════════════════ -->
+
+  <!-- "Tralytic" — bold, no italic (matches reference) -->
+  <text
+    x="240" y="396"
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+    font-size="72" font-weight="900"
+    text-anchor="middle"
+    filter="url(#shadow)">
+    <tspan fill="white">Tra</tspan><tspan fill="#29a8f5">lytic</tspan>
+  </text>
+
+  <!-- ".com" centred below -->
+  <text
+    x="248" y="438"
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+    font-size="33" font-weight="900"
+    text-anchor="middle"
+    fill="#29a8f5"
+    letter-spacing="4"
+    filter="url(#shadow)">.com</text>
+
+</svg>
