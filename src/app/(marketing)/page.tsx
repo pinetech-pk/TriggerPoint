@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  TrendingUp,
   Calendar,
   BarChart2,
   AlertTriangle,
@@ -8,6 +7,7 @@ import {
   ArrowRight,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 
 // ─────────────────────────────────────────────
 // Navbar
@@ -16,11 +16,12 @@ function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#1e293b]/60 bg-[#0a0e17]/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <TrendingUp className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-lg font-semibold text-foreground">Tralytic</span>
+        <Link href="/" className="flex items-center gap-1">
+          <Image src="/logo.svg" alt="Tralytic" width={44} height={44} priority />
+          <span className="text-lg font-black leading-none">
+            <span className="text-white">Tra</span>
+            <span className="text-[#29a8f5]">lytic</span>
+          </span>
         </Link>
 
         <div className="flex items-center gap-5">
@@ -451,11 +452,12 @@ function Footer() {
   return (
     <footer className="border-t border-[#1e293b] px-6 py-8">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-            <TrendingUp className="h-3.5 w-3.5 text-white" />
-          </div>
-          <span className="text-sm font-semibold text-foreground">Tralytic</span>
+        <Link href="/" className="flex items-center gap-1">
+          <Image src="/logo.svg" alt="Tralytic" width={36} height={36} />
+          <span className="text-sm font-black leading-none">
+            <span className="text-white">Tra</span>
+            <span className="text-[#29a8f5]">lytic</span>
+          </span>
         </Link>
 
         <div className="flex items-center gap-6 text-xs text-[#475569]">
