@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Loader2, MoreVertical, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Search, Loader2, MoreVertical, Pencil, Trash2, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,8 @@ interface TradeWithRelations extends Trade {
   strategies?: { name: string } | null;
 }
 
+const PAGE_SIZE = 25;
+
 const SESSION_OPTIONS = [
   { value: "", label: "All Sessions" },
   { value: "AS", label: "Asian" },
@@ -63,6 +65,8 @@ export default function TradesPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<TradeWithRelations | null>(null);
@@ -71,6 +75,7 @@ export default function TradesPage() {
 
   // Filter states
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [selectedStrategy, setSelectedStrategy] = useState("");
   const [selectedSession, setSelectedSession] = useState("");
@@ -78,6 +83,8 @@ export default function TradesPage() {
   const [selectedResult, setSelectedResult] = useState("");
 
   const supabase = createClient();
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -90,6 +97,15 @@ export default function TradesPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Debounce search input — reset to page 1 when new search fires
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Fetch filter options
   useEffect(() => {
@@ -106,44 +122,38 @@ export default function TradesPage() {
     fetchFilters();
   }, [supabase]);
 
-  // Fetch trades
+  // Fetch trades — server-side filtered, searched, and paginated
   const fetchTrades = async () => {
     setLoading(true);
 
+    const from = (currentPage - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
     let query = supabase
       .from("trades")
-      .select(`
-        *,
-        accounts(name),
-        strategies(name)
-      `)
-      .order("entry_date", { ascending: false });
+      .select(`*, accounts(name), strategies(name)`, { count: "exact" })
+      .order("entry_date", { ascending: false })
+      .range(from, to);
 
-    // Apply filters
-    if (selectedAccount) {
-      query = query.eq("account_id", selectedAccount);
-    }
-    if (selectedStrategy) {
-      query = query.eq("strategy_id", selectedStrategy);
-    }
-    if (selectedSession) {
-      query = query.eq("session", selectedSession);
-    }
-    if (selectedDirection) {
-      query = query.eq("direction", selectedDirection);
-    }
-    if (selectedResult === "win") {
-      query = query.eq("is_winner", true);
-    } else if (selectedResult === "loss") {
-      query = query.eq("is_winner", false);
+    if (selectedAccount) query = query.eq("account_id", selectedAccount);
+    if (selectedStrategy) query = query.eq("strategy_id", selectedStrategy);
+    if (selectedSession) query = query.eq("session", selectedSession);
+    if (selectedDirection) query = query.eq("direction", selectedDirection);
+    if (selectedResult === "win") query = query.eq("is_winner", true);
+    else if (selectedResult === "loss") query = query.eq("is_winner", false);
+    if (debouncedSearch) {
+      query = query.or(
+        `title.ilike.%${debouncedSearch}%,security.ilike.%${debouncedSearch}%`
+      );
     }
 
-    const { data, error } = await query as { data: TradeWithRelations[] | null; error: any };
+    const { data, error, count } = await query as { data: TradeWithRelations[] | null; error: any; count: number | null };
 
     if (error) {
       console.error("Error fetching trades:", error);
     } else {
       setTrades(data || []);
+      setTotalCount(count || 0);
     }
 
     setLoading(false);
@@ -151,19 +161,7 @@ export default function TradesPage() {
 
   useEffect(() => {
     fetchTrades();
-  }, [selectedAccount, selectedStrategy, selectedSession, selectedDirection, selectedResult]);
-
-  // Client-side search filter
-  const filteredTrades = trades.filter((trade) => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      trade.title.toLowerCase().includes(searchLower) ||
-      trade.security.toLowerCase().includes(searchLower) ||
-      trade.strategies?.name?.toLowerCase().includes(searchLower) ||
-      trade.accounts?.name?.toLowerCase().includes(searchLower)
-    );
-  });
+  }, [currentPage, selectedAccount, selectedStrategy, selectedSession, selectedDirection, selectedResult, debouncedSearch]);
 
   // Handle delete
   const handleDeleteClick = (trade: TradeWithRelations) => {
@@ -240,35 +238,35 @@ export default function TradesPage() {
               <Select
                 options={accountOptions}
                 value={selectedAccount}
-                onChange={(e) => setSelectedAccount(e.target.value)}
+                onChange={(e) => { setSelectedAccount(e.target.value); setCurrentPage(1); }}
               />
             </div>
             <div className="w-40">
               <Select
                 options={strategyOptions}
                 value={selectedStrategy}
-                onChange={(e) => setSelectedStrategy(e.target.value)}
+                onChange={(e) => { setSelectedStrategy(e.target.value); setCurrentPage(1); }}
               />
             </div>
             <div className="w-36">
               <Select
                 options={SESSION_OPTIONS}
                 value={selectedSession}
-                onChange={(e) => setSelectedSession(e.target.value)}
+                onChange={(e) => { setSelectedSession(e.target.value); setCurrentPage(1); }}
               />
             </div>
             <div className="w-36">
               <Select
                 options={DIRECTION_OPTIONS}
                 value={selectedDirection}
-                onChange={(e) => setSelectedDirection(e.target.value)}
+                onChange={(e) => { setSelectedDirection(e.target.value); setCurrentPage(1); }}
               />
             </div>
             <div className="w-32">
               <Select
                 options={RESULT_OPTIONS}
                 value={selectedResult}
-                onChange={(e) => setSelectedResult(e.target.value)}
+                onChange={(e) => { setSelectedResult(e.target.value); setCurrentPage(1); }}
               />
             </div>
           </div>
@@ -320,17 +318,17 @@ export default function TradesPage() {
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : filteredTrades.length === 0 ? (
+            ) : trades.length === 0 ? (
               <div className="py-12">
                 <EmptyState
                   title="No trades found"
                   description={
-                    trades.length === 0
+                    totalCount === 0 && !debouncedSearch && !selectedAccount && !selectedStrategy && !selectedSession && !selectedDirection && !selectedResult
                       ? "Start logging your trades to build your journal."
                       : "Try adjusting your filters or search terms."
                   }
                   action={
-                    trades.length === 0 ? (
+                    totalCount === 0 && !debouncedSearch && !selectedAccount && !selectedStrategy && !selectedSession && !selectedDirection && !selectedResult ? (
                       <Link href="/trades/new">
                         <Button>
                           <Plus className="h-4 w-4 mr-2" />
@@ -349,7 +347,7 @@ export default function TradesPage() {
                     <TableHead>Trade</TableHead>
                     <TableHead>Direction</TableHead>
                     <TableHead>Session</TableHead>
-                    <TableHead>Strategy</TableHead>
+                    <TableHead>Account</TableHead>
                     <TableHead className="text-right">Risk %</TableHead>
                     <TableHead className="text-right">RRx</TableHead>
                     <TableHead className="text-right">P&L</TableHead>
@@ -359,7 +357,7 @@ export default function TradesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTrades.map((trade) => (
+                  {trades.map((trade) => (
                     <TableRow
                       key={trade.id}
                       className="hover:bg-muted/50"
@@ -386,8 +384,8 @@ export default function TradesPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {trade.strategies?.name ? (
-                          <Badge variant="secondary">{trade.strategies.name}</Badge>
+                        {trade.accounts?.name ? (
+                          <Badge variant="secondary">{trade.accounts.name}</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -490,10 +488,37 @@ export default function TradesPage() {
           </CardContent>
         </Card>
 
-        {/* Trade count */}
-        {!loading && filteredTrades.length > 0 && (
-          <div className="text-sm text-muted-foreground">
-            Showing {filteredTrades.length} of {trades.length} trades
+        {/* Pagination */}
+        {!loading && totalCount > 0 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} trade{totalCount !== 1 ? "s" : ""}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
