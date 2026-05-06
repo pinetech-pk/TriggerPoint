@@ -40,6 +40,7 @@ export async function updateSession(request: NextRequest) {
   // Protected routes check
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup");
+  const isRootPage = request.nextUrl.pathname === "/";
   const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard") ||
     request.nextUrl.pathname.startsWith("/trades") ||
     request.nextUrl.pathname.startsWith("/analytics") ||
@@ -57,6 +58,13 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isAuthPage) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  // Authenticated users visiting the landing page go to the app
+  if (user && isRootPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
