@@ -18,7 +18,7 @@ export function Logo({
   const inner = (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <Image
-        src="/logo.svg"
+        src="/Logo_Icon.png"
         alt="Tralytic logo"
         width={size}
         height={size}
