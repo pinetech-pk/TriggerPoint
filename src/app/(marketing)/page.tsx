@@ -17,7 +17,7 @@ function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#1e293b]/60 bg-[#0a0e17]/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-1">
-          <Image src="/logo.svg" alt="Tralytic" width={44} height={44} priority />
+          <Image src="/Logo_Icon.png" alt="Tralytic" width={44} height={44} priority />
           <span className="text-lg font-black leading-none">
             <span className="text-white">Tra</span>
             <span className="text-[#29a8f5]">lytic</span>
@@ -453,7 +453,7 @@ function Footer() {
     <footer className="border-t border-[#1e293b] px-6 py-8">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
         <Link href="/" className="flex items-center gap-1">
-          <Image src="/logo.svg" alt="Tralytic" width={36} height={36} />
+          <Image src="/Logo_Icon.png" alt="Tralytic" width={36} height={36} />
           <span className="text-sm font-black leading-none">
             <span className="text-white">Tra</span>
             <span className="text-[#29a8f5]">lytic</span>
